@@ -1520,6 +1520,258 @@
 
 // export default AgentTest;
 
+// "use client";
+// import React, {
+//   forwardRef,
+//   useImperativeHandle,
+//   useState,
+//   useEffect,
+// } from "react";
+// import { Card, CardHeader, CardContent } from "@/components/ui/card";
+// import { Input } from "@/components/ui/input";
+// import { Button } from "@/components/ui/button";
+// import { apiService, Agent } from "@/services/api";
+
+// /**
+//  * We'll store the agent's info in a local "AgentCard" shape:
+//  *  - 'id' matches the real DB ID
+//  *  - 'name' is the agent's name
+//  *  - 'description' from agent.configuration?.description
+//  *  - 'selected' whether this card is currently active
+//  */
+// interface AgentCard {
+//   id: number;
+//   name: string;
+//   description: string;
+//   selected: boolean;
+// }
+
+// /**
+//  * This ref interface lets the parent (LabPage) call
+//  *   agentTestRef.current?.addAgentCard(...)
+//  * after creating an agent in KazuriChat
+//  */
+// export interface AgentTestRef {
+//   addAgentCard: (info: { id: number; name: string; description: string }) => void;
+// }
+
+// const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
+//   // Local state
+//   const [agents, setAgents] = useState<AgentCard[]>([]);
+//   const [isLoading, setIsLoading] = useState(false);
+
+//   // We'll let the user type a custom message to test the selected agent
+//   const [testInput, setTestInput] = useState("");
+//   const [testResponse, setTestResponse] = useState<string | null>(null);
+
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   // 1. Fetch existing agents from the DB on mount
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   useEffect(() => {
+//     const fetchExistingAgents = async () => {
+//       try {
+//         setIsLoading(true);
+//         const dbAgents = await apiService.listAgents();
+//         // Convert them into "AgentCard" objects for local display
+//         const agentCards = dbAgents.map((a: Agent) => ({
+//           id: a.id,
+//           name: a.name,
+//           // If the description is stored in `configuration.description`
+//           description: a.configuration?.description ?? "",
+//           selected: false,
+//         }));
+//         setAgents(agentCards);
+//       } catch (error) {
+//         console.error("Failed to fetch existing agents:", error);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+
+//     fetchExistingAgents();
+//   }, []);
+
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   // 2. Expose a method to add a new agent card (from KazuriChat)
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   useImperativeHandle(ref, () => ({
+//     addAgentCard(info) {
+//       const newCard: AgentCard = {
+//         id: info.id,
+//         name: info.name,
+//         description: info.description,
+//         selected: false,
+//       };
+//       setAgents((prev) => [...prev, newCard]);
+//     },
+//   }));
+
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   // 3. Card selection logic (single select)
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   const handleSelectCard = (index: number) => {
+//     setAgents((prev) =>
+//       prev.map((agent, i) => ({
+//         ...agent,
+//         selected: i === index,
+//       }))
+//     );
+//     // Clear previous test response when switching selection
+//     setTestResponse(null);
+//   };
+
+//   // Identify the currently selected agent (if any)
+//   const selectedIndex = agents.findIndex((a) => a.selected);
+//   const hasSelected = selectedIndex !== -1;
+
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   // 4. Test the selected agent by calling backend (queryAgent)
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   const handleTestAgent = async () => {
+//     if (!hasSelected || !testInput.trim()) return;
+//     const agent = agents[selectedIndex];
+
+//     try {
+//       setIsLoading(true);
+//       const response = await apiService.queryAgent(agent.id, testInput);
+//       setTestResponse(response.response);
+//     } catch (error) {
+//       console.error("Failed to test agent:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   // 5. Publish (placeholder — add your own logic)
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   const handlePublishAgent = async () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+//     // Example: just alert for now
+//     alert(`Publishing agent: ${agent.name}`);
+//   };
+
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   // 6. Delete the selected agent from DB and local state
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   const handleDeleteAgent = async () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+
+//     try {
+//       setIsLoading(true);
+//       // Actually delete from DB
+//       await apiService.deleteAgent(agent.id);
+//       // Remove from local array
+//       setAgents((prev) => prev.filter((a) => a.id !== agent.id));
+//       setTestResponse(null);
+//     } catch (error) {
+//       console.error("Failed to delete agent:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   // RENDER
+//   // ───────────────────────────────────────────────────────────────────────────────
+//   return (
+//     <Card className="bg-white h-full flex flex-col relative">
+//       {/* Optional loading overlay */}
+//       {isLoading && (
+//         <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50">
+//           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+//         </div>
+//       )}
+
+//       <CardHeader>
+//         <div>
+//           <h2 className="text-xl font-semibold">Agent Test</h2>
+//           <p className="text-gray-600">Test your agents before deployment</p>
+//         </div>
+//       </CardHeader>
+
+//       <CardContent className="flex-1 flex flex-col">
+//         {/* If empty */}
+//         {agents.length === 0 && !isLoading && (
+//           <div className="text-gray-500 mb-4">
+//             No agents created yet. Please configure an agent on the left.
+//           </div>
+//         )}
+
+//         {/* Grid of agent cards */}
+//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+//           {agents.map((agent, index) => (
+//             <div
+//               key={agent.id}
+//               onClick={() => handleSelectCard(index)}
+//               className={`p-4 border rounded-lg bg-white shadow-sm cursor-pointer transition-colors ${
+//                 agent.selected
+//                   ? "border-blue-500 bg-blue-50"
+//                   : "border-gray-200 hover:border-gray-300"
+//               }`}
+//             >
+//               <h3 className="font-medium mb-2">{agent.name}</h3>
+//               <p className="text-sm text-gray-600">{agent.description}</p>
+//             </div>
+//           ))}
+//         </div>
+
+//         {/* Testing: input for the user to ask a question */}
+//         {hasSelected && (
+//           <div className="mt-4">
+//             <label className="block mb-2 text-sm font-medium">Test Message:</label>
+//             <Input
+//               value={testInput}
+//               onChange={(e) => setTestInput(e.target.value)}
+//               placeholder="Ask a question or provide instructions for the agent"
+//               className="w-full"
+//               disabled={isLoading}
+//             />
+//           </div>
+//         )}
+
+//         {/* Show the agent's response if available */}
+//         {testResponse && (
+//           <div className="mt-4 bg-gray-100 p-2 rounded">
+//             <p className="font-semibold mb-1">Agent Response:</p>
+//             <pre className="text-sm whitespace-pre-wrap">{testResponse}</pre>
+//           </div>
+//         )}
+
+//         {/* Action Buttons */}
+//         <div className="mt-6 flex items-center justify-end gap-4">
+//           <Button
+//             onClick={handleTestAgent}
+//             variant="secondary"
+//             disabled={!hasSelected || !testInput.trim() || isLoading}
+//           >
+//             TEST AGENT
+//           </Button>
+//           <Button
+//             onClick={handlePublishAgent}
+//             variant="default"
+//             disabled={!hasSelected || isLoading}
+//           >
+//             PUBLISH
+//           </Button>
+//           <Button
+//             onClick={handleDeleteAgent}
+//             variant="destructive"
+//             disabled={!hasSelected || isLoading}
+//           >
+//             DELETE
+//           </Button>
+//         </div>
+//       </CardContent>
+//     </Card>
+//   );
+// });
+
+// export default AgentTest;
+
+// AgentTest.tsx
 "use client";
 import React, {
   forwardRef,
@@ -1533,11 +1785,11 @@ import { Button } from "@/components/ui/button";
 import { apiService, Agent } from "@/services/api";
 
 /**
- * We'll store the agent's info in a local "AgentCard" shape:
- *  - 'id' matches the real DB ID
+ * We'll store the agent's info in local "AgentCard" objects:
+ *  - 'id' matches the DB ID
  *  - 'name' is the agent's name
  *  - 'description' from agent.configuration?.description
- *  - 'selected' whether this card is currently active
+ *  - 'selected' indicates if that card is currently active
  */
 interface AgentCard {
   id: number;
@@ -1547,36 +1799,51 @@ interface AgentCard {
 }
 
 /**
- * This ref interface lets the parent (LabPage) call
+ * This ref interface lets the parent (LabPage or similar) call:
  *   agentTestRef.current?.addAgentCard(...)
- * after creating an agent in KazuriChat
+ * after creating an agent in KazuriChat or elsewhere.
  */
 export interface AgentTestRef {
   addAgentCard: (info: { id: number; name: string; description: string }) => void;
 }
 
+/**
+ * Message interface for multi-turn chat:
+ * role: "user" or "assistant"
+ * content: text content
+ */
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
-  // Local state
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1) AGENTS LIST & LOADING STATES
+  // ─────────────────────────────────────────────────────────────────────────────
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // We'll let the user type a custom message to test the selected agent
-  const [testInput, setTestInput] = useState("");
-  const [testResponse, setTestResponse] = useState<string | null>(null);
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2) MULTI-TURN CHAT STATES
+  // ─────────────────────────────────────────────────────────────────────────────
+  // messages: array of user or assistant messages
+  const [messages, setMessages] = useState<Message[]>([]);
+  // chatInput: current user input
+  const [chatInput, setChatInput] = useState("");
 
-  // ───────────────────────────────────────────────────────────────────────────────
-  // 1. Fetch existing agents from the DB on mount
-  // ───────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3) FETCH EXISTING AGENTS ON MOUNT
+  // ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchExistingAgents = async () => {
       try {
         setIsLoading(true);
-        const dbAgents = await apiService.listAgents();
-        // Convert them into "AgentCard" objects for local display
+        const dbAgents = await apiService.listAgents(); // e.g. from your backend
+        // Convert them into "AgentCard" objects
         const agentCards = dbAgents.map((a: Agent) => ({
           id: a.id,
           name: a.name,
-          // If the description is stored in `configuration.description`
           description: a.configuration?.description ?? "",
           selected: false,
         }));
@@ -1591,11 +1858,12 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
     fetchExistingAgents();
   }, []);
 
-  // ───────────────────────────────────────────────────────────────────────────────
-  // 2. Expose a method to add a new agent card (from KazuriChat)
-  // ───────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 4) EXPOSE A METHOD TO ADD A NEW AGENT (FROM PARENT)
+  // ─────────────────────────────────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
     addAgentCard(info) {
+      // Info includes { id, name, description }
       const newCard: AgentCard = {
         id: info.id,
         name: info.name,
@@ -1606,66 +1874,78 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
     },
   }));
 
-  // ───────────────────────────────────────────────────────────────────────────────
-  // 3. Card selection logic (single select)
-  // ───────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 5) HANDLE SELECTING AN AGENT FROM THE GRID
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleSelectCard = (index: number) => {
     setAgents((prev) =>
       prev.map((agent, i) => ({
         ...agent,
-        selected: i === index,
+        selected: i === index, // only index is selected
       }))
     );
-    // Clear previous test response when switching selection
-    setTestResponse(null);
+    // Clear prior chat when switching agents
+    setMessages([]);
   };
 
-  // Identify the currently selected agent (if any)
+  // Identify selected agent
   const selectedIndex = agents.findIndex((a) => a.selected);
   const hasSelected = selectedIndex !== -1;
 
-  // ───────────────────────────────────────────────────────────────────────────────
-  // 4. Test the selected agent by calling backend (queryAgent)
-  // ───────────────────────────────────────────────────────────────────────────────
-  const handleTestAgent = async () => {
-    if (!hasSelected || !testInput.trim()) return;
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6) MULTI-TURN CHAT: handleSendChatMessage
+  // ─────────────────────────────────────────────────────────────────────────────
+  const handleSendChatMessage = async () => {
+    if (!hasSelected || !chatInput.trim()) return;
     const agent = agents[selectedIndex];
+    const userText = chatInput.trim();
+
+    // Add user message locally
+    setMessages((prev) => [...prev, { role: "user", content: userText }]);
+    setChatInput("");
 
     try {
-      setIsLoading(true);
-      const response = await apiService.queryAgent(agent.id, testInput);
-      setTestResponse(response.response);
+        setIsLoading(true);
+        // Call the API
+        const response = await apiService.queryAgent(agent.id, userText);
+        console.log('Agent response:', response); // Debug log
+
+        // Add agent response
+        setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: response.response }
+        ]);
     } catch (error) {
-      console.error("Failed to test agent:", error);
+        console.error("Failed to query agent:", error);
+        setMessages((prev) => [
+            ...prev,
+            {
+                role: "assistant",
+                content: "Sorry, something went wrong. Please try again.",
+            },
+        ]);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
-
-  // ───────────────────────────────────────────────────────────────────────────────
-  // 5. Publish (placeholder — add your own logic)
-  // ───────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 7) PUBLISH & DELETE
+  // ─────────────────────────────────────────────────────────────────────────────
   const handlePublishAgent = async () => {
     if (!hasSelected) return;
     const agent = agents[selectedIndex];
-    // Example: just alert for now
-    alert(`Publishing agent: ${agent.name}`);
+    alert(`Publishing agent: ${agent.name} (Add your real logic here)`);
   };
 
-  // ───────────────────────────────────────────────────────────────────────────────
-  // 6. Delete the selected agent from DB and local state
-  // ───────────────────────────────────────────────────────────────────────────────
   const handleDeleteAgent = async () => {
     if (!hasSelected) return;
     const agent = agents[selectedIndex];
 
     try {
       setIsLoading(true);
-      // Actually delete from DB
-      await apiService.deleteAgent(agent.id);
-      // Remove from local array
+      await apiService.deleteAgent(agent.id); // Remove from DB
       setAgents((prev) => prev.filter((a) => a.id !== agent.id));
-      setTestResponse(null);
+      setMessages([]);
     } catch (error) {
       console.error("Failed to delete agent:", error);
     } finally {
@@ -1673,12 +1953,12 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
     }
   };
 
-  // ───────────────────────────────────────────────────────────────────────────────
-  // RENDER
-  // ───────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 8) RENDER UI
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <Card className="bg-white h-full flex flex-col relative">
-      {/* Optional loading overlay */}
+      {/* Loading Overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
@@ -1687,20 +1967,20 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
 
       <CardHeader>
         <div>
-          <h2 className="text-xl font-semibold">Agent Test</h2>
-          <p className="text-gray-600">Test your agents before deployment</p>
+          <h2 className="text-xl font-semibold">Agent Hub</h2>
+          <p className="text-gray-600">Test your agents with multi-turn chat</p>
         </div>
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col">
-        {/* If empty */}
+        {/* If no agents exist */}
         {agents.length === 0 && !isLoading && (
           <div className="text-gray-500 mb-4">
-            No agents created yet. Please configure an agent on the left.
+            No agents created yet. Please configure an agent first.
           </div>
         )}
 
-        {/* Grid of agent cards */}
+        {/* Agents Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {agents.map((agent, index) => (
             <div
@@ -1718,37 +1998,56 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
           ))}
         </div>
 
-        {/* Testing: input for the user to ask a question */}
+        {/* Multi-turn chat area, only visible if agent is selected */}
         {hasSelected && (
-          <div className="mt-4">
-            <label className="block mb-2 text-sm font-medium">Test Message:</label>
-            <Input
-              value={testInput}
-              onChange={(e) => setTestInput(e.target.value)}
-              placeholder="Ask a question or provide instructions for the agent"
-              className="w-full"
-              disabled={isLoading}
-            />
+          <div className="mt-4 flex flex-col h-72 border rounded p-3">
+            {/* Chat messages */}
+            <div className="flex-1 overflow-y-auto mb-2">
+              {messages.map((msg, i) => {
+                const isUser = msg.role === "user";
+                return (
+                  <div
+                    key={i}
+                    className={`mb-2 p-2 rounded ${
+                      isUser ? "bg-green-100 self-end" : "bg-gray-100"
+                    }`}
+                  >
+                    <p className="font-bold text-sm mb-1">
+                      {isUser ? "You" : "Agent"}
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Chat Input */}
+            <div className="flex items-center gap-2">
+              <Input
+                className="flex-1"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Type your message..."
+                disabled={isLoading}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendChatMessage();
+                  }
+                }}
+              />
+              <Button
+                onClick={handleSendChatMessage}
+                disabled={isLoading || !chatInput.trim()}
+              >
+                Send
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Show the agent's response if available */}
-        {testResponse && (
-          <div className="mt-4 bg-gray-100 p-2 rounded">
-            <p className="font-semibold mb-1">Agent Response:</p>
-            <pre className="text-sm whitespace-pre-wrap">{testResponse}</pre>
-          </div>
-        )}
-
-        {/* Action Buttons */}
+        {/* Publish / Delete Buttons */}
         <div className="mt-6 flex items-center justify-end gap-4">
-          <Button
-            onClick={handleTestAgent}
-            variant="secondary"
-            disabled={!hasSelected || !testInput.trim() || isLoading}
-          >
-            TEST AGENT
-          </Button>
           <Button
             onClick={handlePublishAgent}
             variant="default"
@@ -1770,4 +2069,3 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
 });
 
 export default AgentTest;
-
