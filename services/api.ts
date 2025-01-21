@@ -305,7 +305,8 @@
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://silver-space-succotash-4g7r45pq64rfjv7-8000.app.github.dev";
+  "https://glowing-system-q5p5wxrjvr397v-8000.app.github.dev";
+
 
 /**
  * Agent interface from your backend
