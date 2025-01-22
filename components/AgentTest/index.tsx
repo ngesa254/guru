@@ -1771,26 +1771,619 @@
 
 // export default AgentTest;
 
-// AgentTest.tsx
+// AgentTest.tsx ---Best working
+// "use client";
+// import React, {
+//   forwardRef,
+//   useImperativeHandle,
+//   useState,
+//   useEffect,
+// } from "react";
+// import { Card, CardHeader, CardContent } from "@/components/ui/card";
+// import { Input } from "@/components/ui/input";
+// import { Button } from "@/components/ui/button";
+// import { apiService, Agent } from "@/services/api";
+
+// /**
+//  * We'll store the agent's info in local "AgentCard" objects:
+//  *  - 'id' matches the DB ID
+//  *  - 'name' is the agent's name
+//  *  - 'description' from agent.configuration?.description
+//  *  - 'selected' indicates if that card is currently active
+//  */
+// interface AgentCard {
+//   id: number;
+//   name: string;
+//   description: string;
+//   selected: boolean;
+// }
+
+// /**
+//  * This ref interface lets the parent (LabPage or similar) call:
+//  *   agentTestRef.current?.addAgentCard(...)
+//  * after creating an agent in KazuriChat or elsewhere.
+//  */
+// export interface AgentTestRef {
+//   addAgentCard: (info: { id: number; name: string; description: string }) => void;
+// }
+
+// /**
+//  * Message interface for multi-turn chat:
+//  * role: "user" or "assistant"
+//  * content: text content
+//  */
+// interface Message {
+//   role: "user" | "assistant";
+//   content: string;
+// }
+
+// const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 1) AGENTS LIST & LOADING STATES
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   const [agents, setAgents] = useState<AgentCard[]>([]);
+//   const [isLoading, setIsLoading] = useState(false);
+
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 2) MULTI-TURN CHAT STATES
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // messages: array of user or assistant messages
+//   const [messages, setMessages] = useState<Message[]>([]);
+//   // chatInput: current user input
+//   const [chatInput, setChatInput] = useState("");
+
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 3) FETCH EXISTING AGENTS ON MOUNT
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   useEffect(() => {
+//     const fetchExistingAgents = async () => {
+//       try {
+//         setIsLoading(true);
+//         const dbAgents = await apiService.listAgents(); // e.g. from your backend
+//         // Convert them into "AgentCard" objects
+//         const agentCards = dbAgents.map((a: Agent) => ({
+//           id: a.id,
+//           name: a.name,
+//           description: a.configuration?.description ?? "",
+//           selected: false,
+//         }));
+//         setAgents(agentCards);
+//       } catch (error) {
+//         console.error("Failed to fetch existing agents:", error);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+
+//     fetchExistingAgents();
+//   }, []);
+
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 4) EXPOSE A METHOD TO ADD A NEW AGENT (FROM PARENT)
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   useImperativeHandle(ref, () => ({
+//     addAgentCard(info) {
+//       // Info includes { id, name, description }
+//       const newCard: AgentCard = {
+//         id: info.id,
+//         name: info.name,
+//         description: info.description,
+//         selected: false,
+//       };
+//       setAgents((prev) => [...prev, newCard]);
+//     },
+//   }));
+
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 5) HANDLE SELECTING AN AGENT FROM THE GRID
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   const handleSelectCard = (index: number) => {
+//     setAgents((prev) =>
+//       prev.map((agent, i) => ({
+//         ...agent,
+//         selected: i === index, // only index is selected
+//       }))
+//     );
+//     // Clear prior chat when switching agents
+//     setMessages([]);
+//   };
+
+//   // Identify selected agent
+//   const selectedIndex = agents.findIndex((a) => a.selected);
+//   const hasSelected = selectedIndex !== -1;
+
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 6) MULTI-TURN CHAT: handleSendChatMessage
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   const handleSendChatMessage = async () => {
+//     if (!hasSelected || !chatInput.trim()) return;
+//     const agent = agents[selectedIndex];
+//     const userText = chatInput.trim();
+
+//     // Add user message locally
+//     setMessages((prev) => [...prev, { role: "user", content: userText }]);
+//     setChatInput("");
+
+//     try {
+//         setIsLoading(true);
+//         // Call the API
+//         const response = await apiService.queryAgent(agent.id, userText);
+//         console.log('Agent response:', response); // Debug log
+
+//         // Add agent response
+//         setMessages((prev) => [
+//             ...prev,
+//             { role: "assistant", content: response.response }
+//         ]);
+//     } catch (error) {
+//         console.error("Failed to query agent:", error);
+//         setMessages((prev) => [
+//             ...prev,
+//             {
+//                 role: "assistant",
+//                 content: "Sorry, something went wrong. Please try again.",
+//             },
+//         ]);
+//     } finally {
+//         setIsLoading(false);
+//     }
+//   };
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 7) PUBLISH & DELETE
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   const handlePublishAgent = async () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+//     alert(`Publishing agent: ${agent.name} (Add your real logic here)`);
+//   };
+
+//   const handleDeleteAgent = async () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+
+//     try {
+//       setIsLoading(true);
+//       await apiService.deleteAgent(agent.id); // Remove from DB
+//       setAgents((prev) => prev.filter((a) => a.id !== agent.id));
+//       setMessages([]);
+//     } catch (error) {
+//       console.error("Failed to delete agent:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   // 8) RENDER UI
+//   // ─────────────────────────────────────────────────────────────────────────────
+//   return (
+//     <Card className="bg-white h-full flex flex-col relative">
+//       {/* Loading Overlay */}
+//       {isLoading && (
+//         <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50">
+//           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+//         </div>
+//       )}
+
+//       <CardHeader>
+//         <div>
+//           <h2 className="text-xl font-semibold">Agent Hub</h2>
+//           <p className="text-gray-600">Test your agents with multi-turn chat</p>
+//         </div>
+//       </CardHeader>
+
+//       <CardContent className="flex-1 flex flex-col">
+//         {/* If no agents exist */}
+//         {agents.length === 0 && !isLoading && (
+//           <div className="text-gray-500 mb-4">
+//             No agents created yet. Please configure an agent first.
+//           </div>
+//         )}
+
+//         {/* Agents Grid */}
+//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+//           {agents.map((agent, index) => (
+//             <div
+//               key={agent.id}
+//               onClick={() => handleSelectCard(index)}
+//               className={`p-4 border rounded-lg bg-white shadow-sm cursor-pointer transition-colors ${
+//                 agent.selected
+//                   ? "border-blue-500 bg-blue-50"
+//                   : "border-gray-200 hover:border-gray-300"
+//               }`}
+//             >
+//               <h3 className="font-medium mb-2">{agent.name}</h3>
+//               <p className="text-sm text-gray-600">{agent.description}</p>
+//             </div>
+//           ))}
+//         </div>
+
+//         {/* Multi-turn chat area, only visible if agent is selected */}
+//         {hasSelected && (
+//           <div className="mt-4 flex flex-col h-72 border rounded p-3">
+//             {/* Chat messages */}
+//             <div className="flex-1 overflow-y-auto mb-2">
+//               {messages.map((msg, i) => {
+//                 const isUser = msg.role === "user";
+//                 return (
+//                   <div
+//                     key={i}
+//                     className={`mb-2 p-2 rounded ${
+//                       isUser ? "bg-green-100 self-end" : "bg-gray-100"
+//                     }`}
+//                   >
+//                     <p className="font-bold text-sm mb-1">
+//                       {isUser ? "You" : "Agent"}
+//                     </p>
+//                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+//                   </div>
+//                 );
+//               })}
+//             </div>
+
+//             {/* Chat Input */}
+//             <div className="flex items-center gap-2">
+//               <Input
+//                 className="flex-1"
+//                 value={chatInput}
+//                 onChange={(e) => setChatInput(e.target.value)}
+//                 placeholder="Type your message..."
+//                 disabled={isLoading}
+//                 onKeyDown={(e) => {
+//                   if (e.key === "Enter" && !e.shiftKey) {
+//                     e.preventDefault();
+//                     handleSendChatMessage();
+//                   }
+//                 }}
+//               />
+//               <Button
+//                 onClick={handleSendChatMessage}
+//                 disabled={isLoading || !chatInput.trim()}
+//               >
+//                 Send
+//               </Button>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Publish / Delete Buttons */}
+//         <div className="mt-6 flex items-center justify-end gap-4">
+//           <Button
+//             onClick={handlePublishAgent}
+//             variant="default"
+//             disabled={!hasSelected || isLoading}
+//           >
+//             PUBLISH
+//           </Button>
+//           <Button
+//             onClick={handleDeleteAgent}
+//             variant="destructive"
+//             disabled={!hasSelected || isLoading}
+//           >
+//             DELETE
+//           </Button>
+//         </div>
+//       </CardContent>
+//     </Card>
+//   );
+// });
+
+// export default AgentTest;
+// AgentTest.tsx - Updated UI version - Second best
+// "use client";
+// import React, { forwardRef, useImperativeHandle, useState, useEffect } from "react";
+// import { Card, CardHeader, CardContent } from "@/components/ui/card";
+// import { Input } from "@/components/ui/input";
+// import { Button } from "@/components/ui/button";
+// import { Bot, User, Send, Loader2 } from 'lucide-react';
+// import { apiService, Agent } from "@/services/api";
+
+// // Interfaces
+// interface Message {
+//   role: "user" | "assistant";
+//   content: string;
+// }
+
+// interface AgentCard {
+//   id: number;
+//   name: string;
+//   description: string;
+//   selected: boolean;
+// }
+
+// export interface AgentTestRef {
+//   addAgentCard: (info: { id: number; name: string; description: string }) => void;
+// }
+
+// // ChatMessage Component
+// const ChatMessage = ({ message }: { message: Message }) => {
+//   const isUser = message.role === "user";
+  
+//   return (
+//     <div className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+//       <div className={`flex items-start max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+//         {/* Avatar */}
+//         <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center 
+//           ${isUser ? 'bg-blue-100 ml-2' : 'bg-gray-100 mr-2'}`}>
+//           {isUser ? (
+//             <User className="h-5 w-5 text-blue-600" />
+//           ) : (
+//             <Bot className="h-5 w-5 text-gray-600" />
+//           )}
+//         </div>
+        
+//         {/* Message bubble */}
+//         <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+//           <div className={`rounded-lg px-4 py-2 max-w-full break-words
+//             ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'}`}>
+//             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// // AgentCard Component
+// const AgentCardComponent = ({ 
+//   agent, 
+//   selected, 
+//   onClick 
+// }: { 
+//   agent: AgentCard; 
+//   selected: boolean; 
+//   onClick: () => void;
+// }) => (
+//   <div
+//     onClick={onClick}
+//     className={`p-4 border rounded-lg transition-all duration-200 cursor-pointer
+//       ${selected 
+//         ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]' 
+//         : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+//       }`}
+//   >
+//     <h3 className="font-medium mb-2 text-gray-900">{agent.name}</h3>
+//     <p className="text-sm text-gray-600 line-clamp-2">{agent.description}</p>
+//   </div>
+// );
+
+// // Main Component
+// const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
+//   // State management
+//   const [agents, setAgents] = useState<AgentCard[]>([]);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [messages, setMessages] = useState<Message[]>([]);
+//   const [chatInput, setChatInput] = useState("");
+
+//   // Identify selected agent
+//   const selectedIndex = agents.findIndex((a) => a.selected);
+//   const hasSelected = selectedIndex !== -1;
+
+//   // Fetch agents on mount
+//   useEffect(() => {
+//     const fetchExistingAgents = async () => {
+//       try {
+//         setIsLoading(true);
+//         const dbAgents = await apiService.listAgents();
+//         const agentCards = dbAgents.map((a: Agent) => ({
+//           id: a.id,
+//           name: a.name,
+//           description: a.configuration?.description ?? "",
+//           selected: false,
+//         }));
+//         setAgents(agentCards);
+//       } catch (error) {
+//         console.error("Failed to fetch existing agents:", error);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+
+//     fetchExistingAgents();
+//   }, []);
+
+//   // Expose addAgentCard method
+//   useImperativeHandle(ref, () => ({
+//     addAgentCard(info) {
+//       const newCard: AgentCard = {
+//         id: info.id,
+//         name: info.name,
+//         description: info.description,
+//         selected: false,
+//       };
+//       setAgents((prev) => [...prev, newCard]);
+//     },
+//   }));
+
+//   // Handler functions
+//   const handleSelectCard = (index: number) => {
+//     setAgents((prev) =>
+//       prev.map((agent, i) => ({
+//         ...agent,
+//         selected: i === index,
+//       }))
+//     );
+//     setMessages([]);
+//   };
+
+//   const handleSendChatMessage = async () => {
+//     if (!hasSelected || !chatInput.trim()) return;
+//     const agent = agents[selectedIndex];
+//     const userText = chatInput.trim();
+
+//     setMessages((prev) => [...prev, { role: "user", content: userText }]);
+//     setChatInput("");
+
+//     try {
+//       setIsLoading(true);
+//       const response = await apiService.queryAgent(agent.id, userText);
+//       setMessages((prev) => [
+//         ...prev,
+//         { role: "assistant", content: response.response },
+//       ]);
+//     } catch (error) {
+//       console.error("Failed to test agent:", error);
+//       setMessages((prev) => [
+//         ...prev,
+//         {
+//           role: "assistant",
+//           content: "Sorry, something went wrong. Please try again.",
+//         },
+//       ]);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const handleDeleteAgent = async () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+
+//     try {
+//       setIsLoading(true);
+//       await apiService.deleteAgent(agent.id);
+//       setAgents((prev) => prev.filter((a) => a.id !== agent.id));
+//       setMessages([]);
+//     } catch (error) {
+//       console.error("Failed to delete agent:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const handlePublishAgent = () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+//     alert(`Publishing agent: ${agent.name}`);
+//   };
+
+//   return (
+//     <Card className="bg-white h-full flex flex-col relative">
+//       {/* Loading Overlay */}
+//       {isLoading && (
+//         <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-50">
+//           <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+//         </div>
+//       )}
+
+//       <CardHeader>
+//         <div className="space-y-1">
+//           <h2 className="text-2xl font-bold text-gray-900">Agent Hub</h2>
+//           <p className="text-gray-500">Interact with your AI agents through multi-turn chat</p>
+//         </div>
+//       </CardHeader>
+
+//       <CardContent className="flex-1 flex flex-col space-y-6">
+//         {/* Empty state */}
+//         {agents.length === 0 && !isLoading && (
+//           <div className="text-center py-10 bg-gray-50 rounded-lg">
+//             <Bot className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+//             <p className="text-gray-500">No agents created yet. Please configure an agent first.</p>
+//           </div>
+//         )}
+
+//         {/* Agents Grid */}
+//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+//           {agents.map((agent, index) => (
+//             <AgentCardComponent
+//               key={agent.id}
+//               agent={agent}
+//               selected={agent.selected}
+//               onClick={() => handleSelectCard(index)}
+//             />
+//           ))}
+//         </div>
+
+//         {/* Chat Interface */}
+//         {hasSelected && (
+//           <div className="flex-1 flex flex-col min-h-[400px] border rounded-lg overflow-hidden bg-gray-50">
+//             {/* Selected Agent Header */}
+//             <div className="bg-white p-4 border-b">
+//               <div className="flex items-center space-x-2">
+//                 <Bot className="h-5 w-5 text-blue-500" />
+//                 <span className="font-medium">{agents[selectedIndex].name}</span>
+//               </div>
+//             </div>
+
+//             {/* Messages Area */}
+//             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+//               {messages.map((msg, i) => (
+//                 <ChatMessage key={i} message={msg} />
+//               ))}
+//             </div>
+
+//             {/* Input Area */}
+//             <div className="bg-white p-4 border-t">
+//               <div className="flex items-center space-x-2">
+//                 <Input
+//                   className="flex-1"
+//                   value={chatInput}
+//                   onChange={(e) => setChatInput(e.target.value)}
+//                   placeholder="Type your message..."
+//                   disabled={isLoading}
+//                   onKeyDown={(e) => {
+//                     if (e.key === "Enter" && !e.shiftKey) {
+//                       e.preventDefault();
+//                       handleSendChatMessage();
+//                     }
+//                   }}
+//                 />
+//                 <Button
+//                   onClick={handleSendChatMessage}
+//                   disabled={isLoading || !chatInput.trim()}
+//                   className="px-4 py-2"
+//                 >
+//                   <Send className="h-4 w-4" />
+//                 </Button>
+//               </div>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Action Buttons */}
+//         <div className="flex items-center justify-end space-x-4">
+//           <Button
+//             onClick={handlePublishAgent}
+//             variant="default"
+//             disabled={!hasSelected || isLoading}
+//             className="px-6"
+//           >
+//             Publish
+//           </Button>
+//           <Button
+//             onClick={handleDeleteAgent}
+//             variant="destructive"
+//             disabled={!hasSelected || isLoading}
+//             className="px-6"
+//           >
+//             Delete
+//           </Button>
+//         </div>
+//       </CardContent>
+//     </Card>
+//   );
+// });
+
+// export default AgentTest;
+///////////////////////////////////////////////////////////////////////////////////////////////////////The BEST
 "use client";
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useState,
-  useEffect,
-} from "react";
+import React, { forwardRef, useImperativeHandle, useState, useEffect } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Bot, User, Send, X, Minimize } from 'lucide-react';
 import { apiService, Agent } from "@/services/api";
+import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-/**
- * We'll store the agent's info in local "AgentCard" objects:
- *  - 'id' matches the DB ID
- *  - 'name' is the agent's name
- *  - 'description' from agent.configuration?.description
- *  - 'selected' indicates if that card is currently active
- */
+
+// Interfaces
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface AgentCard {
   id: number;
   name: string;
@@ -1798,49 +2391,153 @@ interface AgentCard {
   selected: boolean;
 }
 
-/**
- * This ref interface lets the parent (LabPage or similar) call:
- *   agentTestRef.current?.addAgentCard(...)
- * after creating an agent in KazuriChat or elsewhere.
- */
 export interface AgentTestRef {
   addAgentCard: (info: { id: number; name: string; description: string }) => void;
 }
 
-/**
- * Message interface for multi-turn chat:
- * role: "user" or "assistant"
- * content: text content
- */
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+// Typing Indicator for chat loading state
+const TypingIndicator = () => (
+  <div className="flex space-x-2 p-3 bg-gray-100 rounded-lg w-16 justify-center">
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+  </div>
+);
 
+// Chat Message Component
+const ChatMessage = ({ message }: { message: Message }) => {
+  const isUser = message.role === "user";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className={`flex items-start max-w-[80%] gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center
+          ${isUser ? 'bg-blue-100' : 'bg-gray-100'}`}
+        >
+          {isUser ? (
+            <User className="h-4 w-4 text-blue-600" />
+          ) : (
+            <Bot className="h-4 w-4 text-gray-600" />
+          )}
+        </div>
+        <div className={`rounded-lg px-4 py-2 ${
+          isUser ? 'bg-blue-600 text-white' : 'bg-white border shadow-sm'
+        }`}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} className="text-sm whitespace-pre-wrap prose prose-sm">{message.content}</ReactMarkdown>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Slide-out Chat Panel Component
+const ChatPanel = ({
+  agent,
+  messages,
+  isLoading,
+  onClose,
+  onMinimize,
+  onSend,
+  inputValue,
+  onInputChange
+}: {
+  agent: AgentCard;
+  messages: Message[];
+  isLoading: boolean;
+  onClose: () => void;
+  onMinimize: () => void;
+  onSend: () => void;
+  inputValue: string;
+  onInputChange: (value: string) => void;
+}) => (
+  <motion.div
+    initial={{ x: "100%" }}
+    animate={{ x: 0 }}
+    exit={{ x: "100%" }}
+    transition={{ type: "spring", damping: 25 }}
+    className="fixed right-0 top-0 h-screen w-96 bg-white shadow-lg border-l flex flex-col z-50"
+  >
+    {/* Chat Header */}
+    <div className="px-4 py-3 border-b flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Bot className="h-5 w-5 text-blue-600" />
+        <h3 className="font-medium">{agent.name}</h3>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onMinimize}
+          className="h-8 w-8"
+        >
+          <Minimize className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onClose}
+          className="h-8 w-8"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+
+    {/* Chat Messages */}
+    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+      {messages.map((msg, i) => (
+        <ChatMessage key={i} message={msg} />
+      ))}
+      {isLoading && <TypingIndicator />}
+    </div>
+
+    {/* Chat Input */}
+    <div className="p-4 border-t bg-white">
+      <div className="flex items-center gap-2">
+        <Input
+          value={inputValue}
+          onChange={(e) => onInputChange(e.target.value)}
+          placeholder="Type your message..."
+          disabled={isLoading}
+          className="flex-1"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSend();
+            }
+          }}
+        />
+        <Button 
+          onClick={onSend} 
+          disabled={isLoading || !inputValue.trim()}
+          size="icon"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  </motion.div>
+);
+
+// Main Component
 const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 1) AGENTS LIST & LOADING STATES
-  // ─────────────────────────────────────────────────────────────────────────────
+  // State
   const [agents, setAgents] = useState<AgentCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 2) MULTI-TURN CHAT STATES
-  // ─────────────────────────────────────────────────────────────────────────────
-  // messages: array of user or assistant messages
   const [messages, setMessages] = useState<Message[]>([]);
-  // chatInput: current user input
   const [chatInput, setChatInput] = useState("");
+  const [activeChatAgent, setActiveChatAgent] = useState<AgentCard | null>(null);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 3) FETCH EXISTING AGENTS ON MOUNT
-  // ─────────────────────────────────────────────────────────────────────────────
+  // Fetch agents on mount
   useEffect(() => {
     const fetchExistingAgents = async () => {
       try {
         setIsLoading(true);
-        const dbAgents = await apiService.listAgents(); // e.g. from your backend
-        // Convert them into "AgentCard" objects
+        const dbAgents = await apiService.listAgents();
         const agentCards = dbAgents.map((a: Agent) => ({
           id: a.id,
           name: a.name,
@@ -1858,12 +2555,9 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
     fetchExistingAgents();
   }, []);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 4) EXPOSE A METHOD TO ADD A NEW AGENT (FROM PARENT)
-  // ─────────────────────────────────────────────────────────────────────────────
+  // Add agent method for parent
   useImperativeHandle(ref, () => ({
     addAgentCard(info) {
-      // Info includes { id, name, description }
       const newCard: AgentCard = {
         id: info.id,
         name: info.name,
@@ -1874,78 +2568,72 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
     },
   }));
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 5) HANDLE SELECTING AN AGENT FROM THE GRID
-  // ─────────────────────────────────────────────────────────────────────────────
+  // Handle selecting an agent card
   const handleSelectCard = (index: number) => {
     setAgents((prev) =>
       prev.map((agent, i) => ({
         ...agent,
-        selected: i === index, // only index is selected
+        selected: i === index,
       }))
     );
-    // Clear prior chat when switching agents
-    setMessages([]);
   };
 
-  // Identify selected agent
-  const selectedIndex = agents.findIndex((a) => a.selected);
-  const hasSelected = selectedIndex !== -1;
+  // Handle opening chat for an agent
+  const handleOpenChat = (agent: AgentCard) => {
+    setActiveChatAgent(agent);
+    setIsChatMinimized(false);
+    setMessages([]); // Clear messages for new chat
+  };
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 6) MULTI-TURN CHAT: handleSendChatMessage
-  // ─────────────────────────────────────────────────────────────────────────────
-  const handleSendChatMessage = async () => {
-    if (!hasSelected || !chatInput.trim()) return;
-    const agent = agents[selectedIndex];
+  // Handle closing chat
+  const handleCloseChat = () => {
+    setActiveChatAgent(null);
+    setMessages([]);
+    setChatInput("");
+  };
+
+  // Handle sending a message
+  const handleSendMessage = async () => {
+    if (!activeChatAgent || !chatInput.trim()) return;
+
     const userText = chatInput.trim();
-
-    // Add user message locally
     setMessages((prev) => [...prev, { role: "user", content: userText }]);
     setChatInput("");
 
     try {
-        setIsLoading(true);
-        // Call the API
-        const response = await apiService.queryAgent(agent.id, userText);
-        console.log('Agent response:', response); // Debug log
-
-        // Add agent response
-        setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: response.response }
-        ]);
+      setIsLoading(true);
+      const response = await apiService.queryAgent(activeChatAgent.id, userText);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response.response },
+      ]);
     } catch (error) {
-        console.error("Failed to query agent:", error);
-        setMessages((prev) => [
-            ...prev,
-            {
-                role: "assistant",
-                content: "Sorry, something went wrong. Please try again.",
-            },
-        ]);
+      console.error("Failed to get response:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, something went wrong. Please try again." },
+      ]);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 7) PUBLISH & DELETE
-  // ─────────────────────────────────────────────────────────────────────────────
-  const handlePublishAgent = async () => {
-    if (!hasSelected) return;
-    const agent = agents[selectedIndex];
-    alert(`Publishing agent: ${agent.name} (Add your real logic here)`);
-  };
 
+  // Get selected agent index
+  const selectedIndex = agents.findIndex((a) => a.selected);
+  const hasSelected = selectedIndex !== -1;
+
+  // Delete agent handler
   const handleDeleteAgent = async () => {
     if (!hasSelected) return;
     const agent = agents[selectedIndex];
 
     try {
       setIsLoading(true);
-      await apiService.deleteAgent(agent.id); // Remove from DB
+      await apiService.deleteAgent(agent.id);
       setAgents((prev) => prev.filter((a) => a.id !== agent.id));
-      setMessages([]);
+      if (activeChatAgent?.id === agent.id) {
+        handleCloseChat();
+      }
     } catch (error) {
       console.error("Failed to delete agent:", error);
     } finally {
@@ -1953,30 +2641,28 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 8) RENDER UI
-  // ─────────────────────────────────────────────────────────────────────────────
+  // Publish agent handler (placeholder)
+  const handlePublishAgent = () => {
+    if (!hasSelected) return;
+    const agent = agents[selectedIndex];
+    alert(`Publishing agent: ${agent.name}`);
+  };
+
   return (
     <Card className="bg-white h-full flex flex-col relative">
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-        </div>
-      )}
-
       <CardHeader>
-        <div>
-          <h2 className="text-xl font-semibold">Agent Hub</h2>
-          <p className="text-gray-600">Test your agents with multi-turn chat</p>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold text-gray-900">Agent Hub</h2>
+          <p className="text-gray-500">Your AI assistants at your service</p>
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col">
-        {/* If no agents exist */}
+      <CardContent className="flex-1 flex flex-col space-y-6">
+        {/* Empty State */}
         {agents.length === 0 && !isLoading && (
-          <div className="text-gray-500 mb-4">
-            No agents created yet. Please configure an agent first.
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <Bot className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+            <p className="text-gray-500">No agents created yet. Configure an agent to get started.</p>
           </div>
         )}
 
@@ -1985,87 +2671,510 @@ const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
           {agents.map((agent, index) => (
             <div
               key={agent.id}
-              onClick={() => handleSelectCard(index)}
-              className={`p-4 border rounded-lg bg-white shadow-sm cursor-pointer transition-colors ${
-                agent.selected
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
+              className={`p-4 border rounded-lg transition-all duration-200
+                ${agent.selected 
+                  ? 'border-blue-500 bg-blue-50 shadow-md' 
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                }`}
             >
-              <h3 className="font-medium mb-2">{agent.name}</h3>
-              <p className="text-sm text-gray-600">{agent.description}</p>
+              <div 
+                className="mb-3 cursor-pointer" 
+                onClick={() => handleSelectCard(index)}
+              >
+                <h3 className="font-medium mb-2">{agent.name}</h3>
+                <p className="text-sm text-gray-600 line-clamp-2">{agent.description}</p>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenChat(agent)}
+                >
+                  Test Agent
+                </Button>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Multi-turn chat area, only visible if agent is selected */}
-        {hasSelected && (
-          <div className="mt-4 flex flex-col h-72 border rounded p-3">
-            {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto mb-2">
-              {messages.map((msg, i) => {
-                const isUser = msg.role === "user";
-                return (
-                  <div
-                    key={i}
-                    className={`mb-2 p-2 rounded ${
-                      isUser ? "bg-green-100 self-end" : "bg-gray-100"
-                    }`}
-                  >
-                    <p className="font-bold text-sm mb-1">
-                      {isUser ? "You" : "Agent"}
-                    </p>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Chat Input */}
-            <div className="flex items-center gap-2">
-              <Input
-                className="flex-1"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type your message..."
-                disabled={isLoading}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendChatMessage();
-                  }
-                }}
-              />
-              <Button
-                onClick={handleSendChatMessage}
-                disabled={isLoading || !chatInput.trim()}
-              >
-                Send
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Publish / Delete Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-4">
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3">
           <Button
             onClick={handlePublishAgent}
-            variant="default"
-            disabled={!hasSelected || isLoading}
+            disabled={!hasSelected}
+            className="px-6"
           >
-            PUBLISH
+            Publish
           </Button>
           <Button
             onClick={handleDeleteAgent}
             variant="destructive"
-            disabled={!hasSelected || isLoading}
+            disabled={!hasSelected}
+            className="px-6"
           >
-            DELETE
+            Delete
           </Button>
         </div>
+
+        {/* Chat Panel */}
+        <AnimatePresence>
+          {activeChatAgent && !isChatMinimized && (
+            <ChatPanel
+              agent={activeChatAgent}
+              messages={messages}
+              isLoading={isLoading}
+              onClose={handleCloseChat}
+              onMinimize={() => setIsChatMinimized(true)}
+              onSend={handleSendMessage}
+              inputValue={chatInput}
+              onInputChange={(value) => setChatInput(value)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Minimized Chat */}
+        {activeChatAgent && isChatMinimized && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border p-3 cursor-pointer"
+            onClick={() => setIsChatMinimized(false)}
+          >
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-blue-500" />
+              <span>{activeChatAgent.name}</span>
+            </div>
+          </motion.div>
+        )}
       </CardContent>
     </Card>
   );
 });
 
 export default AgentTest;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// "use client";
+// import React, {
+//   forwardRef,
+//   useImperativeHandle,
+//   useState,
+//   useEffect,
+// } from "react";
+// import { Card, CardHeader, CardContent } from "@/components/ui/card";
+// import { Input } from "@/components/ui/input";
+// import { Button } from "@/components/ui/button";
+// import { Bot, User, Send, X, Minimize } from "lucide-react";
+// import { apiService, Agent } from "@/services/api";
+// import { motion, AnimatePresence } from "framer-motion";
+
+// // 1) Import for Markdown & Resizing
+// import ReactMarkdown from "react-markdown";
+// import remarkGfm from "remark-gfm";
+// import { Rnd } from "react-rnd";
+
+// // Interfaces
+// interface Message {
+//   role: "user" | "assistant";
+//   content: string;
+// }
+
+// interface AgentCard {
+//   id: number;
+//   name: string;
+//   description: string;
+//   selected: boolean;
+// }
+
+// export interface AgentTestRef {
+//   addAgentCard: (info: { id: number; name: string; description: string }) => void;
+// }
+
+// // Typing Indicator for chat loading state
+// const TypingIndicator = () => (
+//   <div className="flex space-x-2 p-3 bg-gray-100 rounded-lg w-16 justify-center">
+//     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+//     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+//     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+//   </div>
+// );
+
+// // 2) Chat Message Component with Markdown
+// const ChatMessage = ({ message }: { message: Message }) => {
+//   const isUser = message.role === "user";
+//   return (
+//     <motion.div
+//       initial={{ opacity: 0, y: 10 }}
+//       animate={{ opacity: 1, y: 0 }}
+//       className={`flex w-full mb-4 ${isUser ? "justify-end" : "justify-start"}`}
+//     >
+//       <div
+//         className={`flex items-start max-w-[80%] gap-2 ${
+//           isUser ? "flex-row-reverse" : "flex-row"
+//         }`}
+//       >
+//         <div
+//           className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center
+//             ${isUser ? "bg-blue-100" : "bg-gray-100"}`}
+//         >
+//           {isUser ? (
+//             <User className="h-4 w-4 text-blue-600" />
+//           ) : (
+//             <Bot className="h-4 w-4 text-gray-600" />
+//           )}
+//         </div>
+
+//         <div
+//           className={`rounded-lg px-4 py-2 ${
+//             isUser ? "bg-blue-600 text-white" : "bg-white border shadow-sm"
+//           }`}
+//         >
+//           {/* Render Markdown here */}
+//           <ReactMarkdown
+//             remarkPlugins={[remarkGfm]}
+//             className="text-sm whitespace-pre-wrap prose prose-sm"
+//           >
+//             {message.content}
+//           </ReactMarkdown>
+//         </div>
+//       </div>
+//     </motion.div>
+//   );
+// };
+
+// // 3) Slide-out Chat Panel Component with Rnd for resizing
+// const ChatPanel = ({
+//   agent,
+//   messages,
+//   isLoading,
+//   onClose,
+//   onMinimize,
+//   onSend,
+//   inputValue,
+//   onInputChange,
+// }: {
+//   agent: AgentCard;
+//   messages: Message[];
+//   isLoading: boolean;
+//   onClose: () => void;
+//   onMinimize: () => void;
+//   onSend: () => void;
+//   inputValue: string;
+//   onInputChange: (value: string) => void;
+// }) => (
+//   <motion.div
+//     initial={{ x: "100%" }}
+//     animate={{ x: 0 }}
+//     exit={{ x: "100%" }}
+//     transition={{ type: "spring", damping: 25 }}
+//     // Keep position: fixed, pinned to the right
+//     className="fixed right-0 top-0 h-screen z-50"
+//   >
+//     {/* Rnd to allow horizontal resizing from the left */}
+//     <Rnd
+//       default={{
+//         x: 0,
+//         y: 0,
+//         width: 384, // Tailwind w-96 = 384px
+//         height: "100%",
+//       }}
+//       minWidth={300}
+//       maxWidth={800}
+//       enableResizing={{ left: true }}
+//       disableDragging
+//       bounds="parent"
+//       className="bg-white shadow-lg border-l flex flex-col h-full"
+//     >
+//       {/* The existing chat layout in a div */}
+//       <div className="w-full h-full flex flex-col">
+//         {/* Chat Header */}
+//         <div className="px-4 py-3 border-b flex items-center justify-between">
+//           <div className="flex items-center gap-2">
+//             <Bot className="h-5 w-5 text-blue-600" />
+//             <h3 className="font-medium">{agent.name}</h3>
+//           </div>
+//           <div className="flex items-center gap-1">
+//             <Button variant="ghost" size="icon" onClick={onMinimize} className="h-8 w-8">
+//               <Minimize className="h-4 w-4" />
+//             </Button>
+//             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+//               <X className="h-4 w-4" />
+//             </Button>
+//           </div>
+//         </div>
+
+//         {/* Chat Messages */}
+//         <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+//           {messages.map((msg, i) => (
+//             <ChatMessage key={i} message={msg} />
+//           ))}
+//           {isLoading && <TypingIndicator />}
+//         </div>
+
+//         {/* Chat Input */}
+//         <div className="p-4 border-t bg-white">
+//           <div className="flex items-center gap-2">
+//             <Input
+//               value={inputValue}
+//               onChange={(e) => onInputChange(e.target.value)}
+//               placeholder="Type your message..."
+//               disabled={isLoading}
+//               className="flex-1"
+//               onKeyDown={(e) => {
+//                 if (e.key === "Enter" && !e.shiftKey) {
+//                   e.preventDefault();
+//                   onSend();
+//                 }
+//               }}
+//             />
+//             <Button
+//               onClick={onSend}
+//               disabled={isLoading || !inputValue.trim()}
+//               size="icon"
+//             >
+//               <Send className="h-4 w-4" />
+//             </Button>
+//           </div>
+//         </div>
+//       </div>
+//     </Rnd>
+//   </motion.div>
+// );
+
+// // 4) Main Component (unchanged except for minor imports)
+// const AgentTest = forwardRef<AgentTestRef>((props, ref) => {
+//   // State
+//   const [agents, setAgents] = useState<AgentCard[]>([]);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [messages, setMessages] = useState<Message[]>([]);
+//   const [chatInput, setChatInput] = useState("");
+//   const [activeChatAgent, setActiveChatAgent] = useState<AgentCard | null>(null);
+//   const [isChatMinimized, setIsChatMinimized] = useState(false);
+
+//   // Fetch agents on mount
+//   useEffect(() => {
+//     const fetchExistingAgents = async () => {
+//       try {
+//         setIsLoading(true);
+//         const dbAgents = await apiService.listAgents();
+//         const agentCards = dbAgents.map((a: Agent) => ({
+//           id: a.id,
+//           name: a.name,
+//           description: a.configuration?.description ?? "",
+//           selected: false,
+//         }));
+//         setAgents(agentCards);
+//       } catch (error) {
+//         console.error("Failed to fetch existing agents:", error);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+
+//     fetchExistingAgents();
+//   }, []);
+
+//   // Add agent method for parent
+//   useImperativeHandle(ref, () => ({
+//     addAgentCard(info) {
+//       const newCard: AgentCard = {
+//         id: info.id,
+//         name: info.name,
+//         description: info.description,
+//         selected: false,
+//       };
+//       setAgents((prev) => [...prev, newCard]);
+//     },
+//   }));
+
+//   // Handle selecting an agent card
+//   const handleSelectCard = (index: number) => {
+//     setAgents((prev) =>
+//       prev.map((agent, i) => ({
+//         ...agent,
+//         selected: i === index,
+//       }))
+//     );
+//   };
+
+//   // Handle opening chat for an agent
+//   const handleOpenChat = (agent: AgentCard) => {
+//     setActiveChatAgent(agent);
+//     setIsChatMinimized(false);
+//     setMessages([]); // Clear messages for new chat
+//   };
+
+//   // Handle closing chat
+//   const handleCloseChat = () => {
+//     setActiveChatAgent(null);
+//     setMessages([]);
+//     setChatInput("");
+//   };
+
+//   // Handle sending a message
+//   const handleSendMessage = async () => {
+//     if (!activeChatAgent || !chatInput.trim()) return;
+
+//     const userText = chatInput.trim();
+//     setMessages((prev) => [...prev, { role: "user", content: userText }]);
+//     setChatInput("");
+
+//     try {
+//       setIsLoading(true);
+//       const response = await apiService.queryAgent(activeChatAgent.id, userText);
+//       setMessages((prev) => [
+//         ...prev,
+//         { role: "assistant", content: response.response },
+//       ]);
+//     } catch (error) {
+//       console.error("Failed to get response:", error);
+//       setMessages((prev) => [
+//         ...prev,
+//         { role: "assistant", content: "Sorry, something went wrong. Please try again." },
+//       ]);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   // Get selected agent index
+//   const selectedIndex = agents.findIndex((a) => a.selected);
+//   const hasSelected = selectedIndex !== -1;
+
+//   // Delete agent handler
+//   const handleDeleteAgent = async () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+
+//     try {
+//       setIsLoading(true);
+//       await apiService.deleteAgent(agent.id);
+//       setAgents((prev) => prev.filter((a) => a.id !== agent.id));
+//       if (activeChatAgent?.id === agent.id) {
+//         handleCloseChat();
+//       }
+//     } catch (error) {
+//       console.error("Failed to delete agent:", error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   // Publish agent handler (placeholder)
+//   const handlePublishAgent = () => {
+//     if (!hasSelected) return;
+//     const agent = agents[selectedIndex];
+//     alert(`Publishing agent: ${agent.name}`);
+//   };
+
+//   return (
+//     <Card className="bg-white h-full flex flex-col relative">
+//       <CardHeader>
+//         <div className="space-y-1">
+//           <h2 className="text-2xl font-bold text-gray-900">Agent Hub</h2>
+//           <p className="text-gray-500">Your AI assistants at your service</p>
+//         </div>
+//       </CardHeader>
+
+//       <CardContent className="flex-1 flex flex-col space-y-6">
+//         {/* Empty State */}
+//         {agents.length === 0 && !isLoading && (
+//           <div className="text-center py-12 bg-gray-50 rounded-lg">
+//             <Bot className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+//             <p className="text-gray-500">
+//               No agents created yet. Configure an agent to get started.
+//             </p>
+//           </div>
+//         )}
+
+//         {/* Agents Grid */}
+//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+//           {agents.map((agent, index) => (
+//             <div
+//               key={agent.id}
+//               className={`p-4 border rounded-lg transition-all duration-200
+//                 ${
+//                   agent.selected
+//                     ? "border-blue-500 bg-blue-50 shadow-md"
+//                     : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+//                 }`}
+//             >
+//               <div
+//                 className="mb-3 cursor-pointer"
+//                 onClick={() => handleSelectCard(index)}
+//               >
+//                 <h3 className="font-medium mb-2">{agent.name}</h3>
+//                 <p className="text-sm text-gray-600 line-clamp-2">
+//                   {agent.description}
+//                 </p>
+//               </div>
+//               <div className="flex justify-end">
+//                 <Button
+//                   variant="outline"
+//                   size="sm"
+//                   onClick={() => handleOpenChat(agent)}
+//                 >
+//                   Test Agent
+//                 </Button>
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+
+//         {/* Action Buttons */}
+//         <div className="flex justify-end gap-3">
+//           <Button
+//             onClick={handlePublishAgent}
+//             disabled={!hasSelected}
+//             className="px-6"
+//           >
+//             Publish
+//           </Button>
+//           <Button
+//             onClick={handleDeleteAgent}
+//             variant="destructive"
+//             disabled={!hasSelected}
+//             className="px-6"
+//           >
+//             Delete
+//           </Button>
+//         </div>
+
+//         {/* Chat Panel */}
+//         <AnimatePresence>
+//           {activeChatAgent && !isChatMinimized && (
+//             <ChatPanel
+//               agent={activeChatAgent}
+//               messages={messages}
+//               isLoading={isLoading}
+//               onClose={handleCloseChat}
+//               onMinimize={() => setIsChatMinimized(true)}
+//               onSend={handleSendMessage}
+//               inputValue={chatInput}
+//               onInputChange={(value) => setChatInput(value)}
+//             />
+//           )}
+//         </AnimatePresence>
+
+//         {/* Minimized Chat */}
+//         {activeChatAgent && isChatMinimized && (
+//           <motion.div
+//             initial={{ y: "100%" }}
+//             animate={{ y: 0 }}
+//             exit={{ y: "100%" }}
+//             className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border p-3 cursor-pointer"
+//             onClick={() => setIsChatMinimized(false)}
+//           >
+//             <div className="flex items-center gap-2">
+//               <Bot className="h-5 w-5 text-blue-500" />
+//               <span>{activeChatAgent.name}</span>
+//             </div>
+//           </motion.div>
+//         )}
+//       </CardContent>
+//     </Card>
+//   );
+// });
+
+// export default AgentTest;

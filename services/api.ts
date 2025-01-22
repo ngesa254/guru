@@ -112,7 +112,7 @@
 // // }
 
 // // export const apiService = new ApiService();
-
+// -THE WORKING ONE
 // const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://silver-space-succotash-4g7r45pq64rfjv7-8000.app.github.dev';
 
 // // Agent Interfaces
@@ -303,100 +303,57 @@
 // export const apiService = new ApiService();
 // services/api.ts
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://silver-space-succotash-4g7r45pq64rfjv7-8000.app.github.dev";
+// 
+// api.ts
 
-/**
- * Agent interface from your backend
- * (Ensure it matches what's returned by the API)
- */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://silver-space-succotash-4g7r45pq64rfjv7-8000.app.github.dev';
+
+// Interfaces
 export interface Agent {
-  id: string;
+  id: number;
   name: string;
-  description: string;
+  type: string;
+  status: string;
+  configuration?: {
+    description?: string;
+    [key: string]: any;
+  };
 }
 
-/**
- * For queries, the server expects { query: string }
- */
-export interface AgentQuery {
-  query: string;
-}
-
-/**
- * Tool interfaces, etc. if needed
- */
 export interface Tool {
   name: string;
   description: string;
-}
-
-export interface ToolCode {
-  code: string;
+  created_by: string;
+  created_at: string;
+  is_sample: boolean;
 }
 
 class ApiService {
-  /**
-   * A helper to unify fetch calls with default headers etc.
-   */
   private async fetchWithConfig(url: string, config: RequestInit = {}): Promise<Response> {
     console.log(`Making request to: ${url}`);
-
-    // Merge your default config
+    
     const defaultConfig: RequestInit = {
-      credentials: "include",
+      credentials: 'include',
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
       },
       ...config,
       headers: {
         ...config.headers,
-        "Content-Type": config.headers?.["Content-Type"] || "application/json",
-        Accept: "application/json",
+        'Content-Type': config.headers?.['Content-Type'] || 'application/json',
+        'Accept': 'application/json',
       },
     };
 
-    console.log("Request config:", defaultConfig);
-
-    try {
-      const response = await fetch(url, defaultConfig);
-
-      console.log("Response status:", response.status);
-      console.log("Response headers:", Object.fromEntries(response.headers));
-
-      // Example handling if 302 is not expected
-      if (response.status === 302) {
-        const redirectUrl = response.headers.get("location");
-        console.log("Redirect detected to:", redirectUrl);
-        throw new Error(`Unexpected redirect to: ${redirectUrl}`);
-      }
-
-      return response;
-    } catch (error) {
-      console.error("Fetch error:", error);
-      throw error;
+    const response = await fetch(url, defaultConfig);
+    if (response.status === 401) {
+      throw new Error('Unauthorized');
     }
+    return response;
   }
 
-  /**
-   * Optional test to see if server is reachable
-   */
-  async testConnection(): Promise<boolean> {
-    try {
-      const response = await this.fetchWithConfig(`${API_BASE_URL}/test`);
-      return response.ok;
-    } catch (error) {
-      console.error("Connection test failed:", error);
-      return false;
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  //                            AGENTS
-  // ─────────────────────────────────────────────────────────────────────────────
-
+  // Agents Endpoints
   async listAgents(): Promise<Agent[]> {
     const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/`);
     if (!response.ok) {
@@ -406,10 +363,16 @@ class ApiService {
     return response.json();
   }
 
-  async createAgent(agent: { name: string; description: string }): Promise<Agent> {
+  async createAgent(agent: { name: string; type: string; description?: string }): Promise<Agent> {
     const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/`, {
-      method: "POST",
-      body: JSON.stringify(agent),
+      method: 'POST',
+      body: JSON.stringify({
+        name: agent.name,
+        type: agent.type,
+        configuration: {
+          description: agent.description
+        }
+      })
     });
     if (!response.ok) {
       const error = await response.text();
@@ -418,16 +381,14 @@ class ApiService {
     return response.json();
   }
 
-  async uploadDocument(agentId: string, file: File): Promise<void> {
+  async uploadDocument(agentId: number | string, file: File): Promise<void> {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append('file', file);
 
-    // When sending FormData, do NOT set 'Content-Type'
     const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/${agentId}/upload`, {
-      method: "POST",
-      headers: {}, // Let fetch set content-type for FormData
-      body: formData,
-      credentials: "include",
+      method: 'POST',
+      headers: {}, // Let browser set content-type for FormData
+      body: formData
     });
 
     if (!response.ok) {
@@ -436,25 +397,26 @@ class ApiService {
     }
   }
 
-  /**
-   * The key method to send "query" to the server
-   */
   async queryAgent(agentId: string | number, userText: string): Promise<any> {
-    // Debug log to verify data being sent
-    console.log('Sending query to agent:', { agentId, userText });
+    // Debug: Log what we're trying to send
+    console.log('Attempting to send query:', { agentId, userText });
 
-    // Create FormData and append the query
-    const formData = new FormData();
+    // Create URLSearchParams instead of FormData
+    const formData = new URLSearchParams();
     formData.append('query', userText);
+
+    // Debug: Log what's being sent
+    console.log('Form data being sent:', formData.toString());
 
     const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/${agentId}/query`, {
         method: 'POST',
-        // Important: Don't set Content-Type when using FormData
-        headers: {},
-        body: formData
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+        credentials: 'include'
     });
 
-    // Log response for debugging
     if (!response.ok) {
         const errorText = await response.text();
         console.error('Query error details:', errorText);
@@ -464,20 +426,18 @@ class ApiService {
     return response.json();
   }
 
-  async deleteAgent(agentId: string): Promise<void> {
+  async deleteAgent(agentId: number | string): Promise<void> {
     const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/${agentId}`, {
-      method: "DELETE",
+      method: 'DELETE'
     });
+    
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`Failed to delete agent: ${error}`);
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  //                             TOOLS
-  // ─────────────────────────────────────────────────────────────────────────────
-
+  // Tools Endpoints
   async listTools(): Promise<Tool[]> {
     const response = await this.fetchWithConfig(`${API_BASE_URL}/tools/`);
     if (!response.ok) {
@@ -487,10 +447,10 @@ class ApiService {
     return response.json();
   }
 
-  async createTool(tool: Tool): Promise<Tool> {
+  async createTool(description: string): Promise<Tool> {
     const response = await this.fetchWithConfig(`${API_BASE_URL}/tools/`, {
-      method: "POST",
-      body: JSON.stringify(tool),
+      method: 'POST',
+      body: JSON.stringify({ description })
     });
     if (!response.ok) {
       const error = await response.text();
@@ -501,8 +461,8 @@ class ApiService {
 
   async createToolFromCode(code: string): Promise<Tool> {
     const response = await this.fetchWithConfig(`${API_BASE_URL}/tools/code`, {
-      method: "POST",
-      body: JSON.stringify({ code }),
+      method: 'POST',
+      body: JSON.stringify({ code })
     });
     if (!response.ok) {
       const error = await response.text();
@@ -522,8 +482,8 @@ class ApiService {
 
   async executeTool(toolName: string, params: any): Promise<any> {
     const response = await this.fetchWithConfig(`${API_BASE_URL}/tools/${toolName}/execute`, {
-      method: "POST",
-      body: JSON.stringify(params),
+      method: 'POST',
+      body: JSON.stringify(params)
     });
     if (!response.ok) {
       const error = await response.text();

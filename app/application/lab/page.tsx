@@ -137,8 +137,8 @@ export default function LabPage() {
   return (
     <div className="flex flex-col h-full w-full p-4">
       {/* Page Title & Description */}
-      <h1 className="text-2xl font-bold mb-2">KAZURI Studio</h1>
-      <p className="mb-4 text-gray-600">Create your Own AI Agent with no code</p>
+      <h1 className="text-2xl font-bold mb-2">Kazuri Studio</h1>
+      <p className="mb-4 text-gray-600">Create your Own AI Agents with no code</p>
 
       {/* Main layout: Chat (left) + AgentTest (right) */}
       <div className="flex flex-row h-[600px] space-x-4">
