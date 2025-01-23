@@ -328,6 +328,18 @@ export interface Tool {
   is_sample: boolean;
 }
 
+interface CreateAgentParams {
+  name: string;
+  type: string;
+  configuration: {
+    description?: string;
+    instructions?: string;
+    prompt_template?: string;
+    tools?: string[];
+    tools_config?: any;
+    [key: string]: any;
+  };
+}
 class ApiService {
   private async fetchWithConfig(url: string, config: RequestInit = {}): Promise<Response> {
     console.log(`Making request to: ${url}`);
@@ -363,39 +375,87 @@ class ApiService {
     return response.json();
   }
 
-  async createAgent(agent: { name: string; type: string; description?: string }): Promise<Agent> {
+  // async createAgent(agent: { name: string; type: string; description?: string }): Promise<Agent> {
+  //   const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/`, {
+  //     method: 'POST',
+  //     body: JSON.stringify({
+  //       name: agent.name,
+  //       type: agent.type,
+  //       configuration: {
+  //         description: agent.description
+  //       }
+  //     })
+  //   });
+  //   if (!response.ok) {
+  //     const error = await response.text();
+  //     throw new Error(`Failed to create agent: ${error}`);
+  //   }
+  //   return response.json();
+  // }
+  async createAgent(agent: CreateAgentParams): Promise<Agent> {
+    console.log('Creating agent with config:', agent); // Debug log
+    
     const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/`, {
       method: 'POST',
       body: JSON.stringify({
         name: agent.name,
         type: agent.type,
-        configuration: {
-          description: agent.description
-        }
+        configuration: agent.configuration  // Pass the entire configuration object
       })
     });
+    
     if (!response.ok) {
       const error = await response.text();
+      console.error('Agent creation failed:', error); // Debug log
       throw new Error(`Failed to create agent: ${error}`);
     }
+    
     return response.json();
   }
 
   async uploadDocument(agentId: number | string, file: File): Promise<void> {
+    console.log('Starting upload:', { agentId, fileName: file.name });
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', file, file.name);  // Add filename explicitly
 
-    const response = await this.fetchWithConfig(`${API_BASE_URL}/agents/${agentId}/upload`, {
-      method: 'POST',
-      headers: {}, // Let browser set content-type for FormData
-      body: formData
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to upload document: ${error}`);
+    // Log the actual FormData contents
+    for (let [key, value] of formData.entries()) {
+        console.log('FormData entry:', key, value instanceof File ? value.name : value);
     }
-  }
+
+    try {
+        const url = `${API_BASE_URL}/agents/${agentId}/upload`;
+        console.log('Making request to:', url);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+            // Let browser handle the Content-Type header
+        }).catch(error => {
+            console.error('Network error during fetch:', error);
+            throw new Error(`Network error during upload: ${error.message}`);
+        });
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => 'No error text available');
+            console.error('Upload failed:', {
+                status: response.status,
+                statusText: response.statusText,
+                text
+            });
+            throw new Error(`Upload failed (${response.status}): ${text}`);
+        }
+
+        const result = await response.json().catch(() => ({ message: 'Upload completed but no JSON response' }));
+        console.log('Upload successful:', result);
+        return result;
+    } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+    }
+}
 
   async queryAgent(agentId: string | number, userText: string): Promise<any> {
     // Debug: Log what we're trying to send
